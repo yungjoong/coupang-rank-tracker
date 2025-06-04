@@ -25,23 +25,20 @@ class CoupangRankChecker:
                 "--disable-web-security",
                 "--disable-features=VizDisplayCompositor",
                 "--incognito",  # 개인화 요소 제거
-                # "--no-sandbox",
-                # "--disable-setuid-sandbox",
-                # "--disable-features=IsolateOrigins,site-per-process",
             ]
         )
         self.context = await self.browser.new_context(
-            # 랜덤 User-Agent (봇 탐지 방지)
             user_agent=self.get_random_user_agent(),
-
-            # 쿠키 및 스토리지 무시
             ignore_https_errors=True,
         )
 
     def get_random_user_agent(self):
         """랜덤 User-Agent 생성"""
         user_agents = [
-
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
+            "Mozilla/5.0 (Linux; Android 10; SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
         ]
         return random.choice(user_agents)
 
@@ -56,43 +53,96 @@ class CoupangRankChecker:
         if self.browser:
             await self.browser.close()
 
-async def find_product_rank (keyword : str, product_url : str, is_mobile : bool = False):
-    with async_playwright() as p:
-        browser = p.chromium.launch(headless=False)
-        page = browser.new_page()
+async def find_product_rank(keyword: str, product_url: str, is_mobile: bool = False):
+    """
+    쿠팡에서 상품 순위를 찾는 함수
 
-        # 페이지 이동
+    Args:
+        keyword (str): 검색 키워드
+        product_url (str): 찾을 상품의 URL
+        is_mobile (bool): 모바일 검색 여부
+
+    Returns:
+        int: 상품 순위 (찾지 못한 경우 -1)
+    """
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+
+        # User-Agent 설정
         user_agent_pc = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
         user_agent_mobile = "Mozilla/5.0 (Linux; Android 10; SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
         ua = user_agent_mobile if is_mobile else user_agent_pc
 
-        context = browser.new_context(user_agent=ua)
-        page = context.new_page()
+        context = await browser.new_context(user_agent=ua)
+        page = await context.new_page()
 
-        search_url = f"https://www.coupang.com/np/search?&q={keyword}&channel=user"
-        next_page = f"https://www.coupang.com/np/search?q={keyword}&channel=user&page=5"
-        page.goto(search_url)
-        page.wait_for_timeout(5000)
+        try:
+            # URL에서 상품 ID 추출
+            product_id = product_url.split('products/')[1].split('?')[0]
 
-        rank = 1
-        found_rank = False
-        items = page.query_selector_all('#product-list > li')
-        for item in items :
-            link = ""
+            # 검색 URL 생성
+            encoded_keyword = urllib.parse.quote(keyword)
+            search_url = f"https://www.coupang.com/np/search?q={encoded_keyword}&channel=user"
 
-        f"/vp/products/6409464601?itemId=1087020209&vendorItemId=90419565452&q=비타민&searchId=16cdad842266734&sourceType=search&itemsCount=36&searchRank=33&rank=33"
+            # 검색 페이지로 이동
+            await page.goto(search_url)
+            await page.wait_for_timeout(3000)  # 페이지 로딩 대기
 
-        # 브라우저 종료
-        browser.close()
+            rank = 1
+            page_num = 1
+            max_pages = 5  # 최대 5페이지까지 검색
 
+            while page_num <= max_pages:
+                # 상품 목록 가져오기
+                items = await page.query_selector_all('#productList > li')
+
+                for item in items:
+                    try:
+                        # 상품 링크 가져오기
+                        link_element = await item.query_selector('a')
+                        if not link_element:
+                            continue
+
+                        link = await link_element.get_attribute('href')
+                        if not link:
+                            continue
+
+                        # 상품 ID 추출 및 비교
+                        if product_id in link:
+                            print(f"\n상품을 찾았습니다!")
+                            print(f"키워드: {keyword}")
+                            print(f"순위: {rank}위")
+                            print(f"페이지: {page_num}페이지")
+                            return rank
+
+                        rank += 1
+                    except Exception as e:
+                        print(f"상품 처리 중 오류 발생: {str(e)}")
+                        continue
+
+                # 다음 페이지로 이동
+                page_num += 1
+                if page_num <= max_pages:
+                    next_page_url = f"https://www.coupang.com/np/search?q={encoded_keyword}&channel=user&page={page_num}"
+                    await page.goto(next_page_url)
+                    await page.wait_for_timeout(3000)
+
+            print(f"\n상품을 찾지 못했습니다.")
+            print(f"검색된 키워드: {keyword}")
+            print(f"검색한 페이지 수: {max_pages}")
+            return -1
+
+        except Exception as e:
+            print(f"오류 발생: {str(e)}")
+            return -1
+
+        finally:
+            await browser.close()
 
 async def main():
     checker = CoupangRankChecker()
-
     try:
-        # 브라우저 초기화
         await checker.init_browser()
-
     finally:
         await checker.cleanup()
 
