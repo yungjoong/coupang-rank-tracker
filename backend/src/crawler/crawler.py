@@ -90,7 +90,7 @@ async def find_product_rank(keyword: str, product_url: str, is_mobile: bool = Fa
 
             rank = 1
             page_num = 1
-            max_pages = 5  # 최대 5페이지까지 검색
+            max_pages = 3  # 최대 3페이지까지 검색
 
             while page_num <= max_pages:
                 # 상품 목록 가져오기
@@ -130,6 +130,7 @@ async def find_product_rank(keyword: str, product_url: str, is_mobile: bool = Fa
             print(f"\n상품을 찾지 못했습니다.")
             print(f"검색된 키워드: {keyword}")
             print(f"검색한 페이지 수: {max_pages}")
+            print(f"상위 {rank-1}개 상품 중에 해당 상품이 없습니다.")
             return -1
 
         except Exception as e:
