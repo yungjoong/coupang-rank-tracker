@@ -9,3 +9,9 @@ git config --global --get pull.rebase
 git config --global pull.rebase false
 git config pull.rebase false
 ```
+
+## 참고한 문서들
+* [Scrapy Playwright: Complete Tutorial 2025
+](https://www.zenrows.com/blog/scrapy-playwright#set-up-a-scrapy-project)
+* [How to Use Playwright Stealth for Scraping](https://www.zenrows.com/blog/playwright-stealth#what-is)
+* [Scrapy Impersonate: Advanced Tutorial for 2025](https://www.zenrows.com/blog/scrapy-impersonate#why-scrapy-impersonate)
