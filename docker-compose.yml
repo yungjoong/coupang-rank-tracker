@@ -33,12 +33,12 @@ services:
   celery_worker:
     build: ./backend
     command: celery -A src.worker.celery worker --loglevel=info
-    volumes:
-      - ./backend:/app
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/coupang_rank
       - REDIS_URL=redis://redis:6379/0
       - DISPLAY=:0
+    volumes:
+      - ./backend/src:/app/src
     depends_on:
       - backend
       - redis

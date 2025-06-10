@@ -7,3 +7,5 @@ undetected-chromedriver==3.5.3
 celery==5.3.6
 redis==5.0.1
 flower==2.0.1
+pydantic-settings==2.1.0
+pydantic==2.5.2

@@ -14,8 +14,3 @@ celery.conf.update(
     timezone='Asia/Seoul',
     enable_utc=True,
 )
-
-@celery.task
-async def crawl_product_rank(keyword: str, product_url: str):
-    from .crawler.test_again import find_product_rank
-    return await find_product_rank(keyword, product_url)
