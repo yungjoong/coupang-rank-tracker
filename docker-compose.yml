@@ -2,11 +2,15 @@ version: '3.8'
 
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "9000:9000"
     volumes:
-      - ./frontend:/app
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
@@ -20,7 +24,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - DISPLAY=:0
     volumes:
-      - ./backend:/app
+      - ./backend/src:/app/src
       - /tmp/.X11-unix:/tmp/.X11-unix
     depends_on:
       - db
