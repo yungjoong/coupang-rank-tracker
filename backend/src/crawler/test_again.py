@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import undetected_chromedriver as uc
 from datetime import datetime
 import time
