@@ -1,0 +1,9 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+python-dotenv==1.0.0
+undetected-chromedriver==3.5.3
+celery==5.3.6
+redis==5.0.1
+flower==2.0.1
