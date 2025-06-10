@@ -3,6 +3,7 @@ import axios, { type AxiosInstance } from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:8000',
+  withCredentials: true,
 });
 
 declare module 'vue' {

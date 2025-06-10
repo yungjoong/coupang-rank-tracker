@@ -1,10 +1,8 @@
 from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-
-Base = declarative_base()
+from .database import Base
 
 class Product(Base):
     __tablename__ = "products"
@@ -37,3 +35,17 @@ class Ranking(Base):
 class ProductSearch(BaseModel):
     keyword: str
     url: str
+
+class ProductBase(BaseModel):
+    url: str
+    name: str
+
+class ProductCreate(ProductBase):
+    pass
+
+class Product(ProductBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
