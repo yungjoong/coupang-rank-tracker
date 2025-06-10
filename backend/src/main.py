@@ -31,7 +31,7 @@ def get_db():
         db.close()
 
 @app.post("/search/")
-async def search_product_rank(product: models.ProductSearch):
+async def search_product_rank(product: schemas.ProductSearch):
     # Celery task 실행
     task = crawl_product_rank.delay(
         keyword=product.keyword,
