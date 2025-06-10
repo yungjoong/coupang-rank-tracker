@@ -1,35 +1,38 @@
 version: '3.8'
 
 services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: quasar dev
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/coupang_tracker
-    depends_on:
-      - db
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-
-  crawler:
-    build: ./crawler
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/coupang_tracker
+      - DATABASE_URL=postgresql://user:password@db:5432/coupang_rank
+      - DISPLAY=:0
+    volumes:
+      - ./backend:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix
     depends_on:
       - db
 
   db:
-    image: postgres:13
+    image: postgres:15
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=coupang_tracker
+      - POSTGRES_DB=coupang_rank
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
