@@ -75,6 +75,29 @@ def get_products(db: Session = Depends(get_db)):
     products = db.query(models.Product).all()
     return products
 
+@app.post("/products/{product_id}/check-ranks")
+async def check_product_ranks(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    tasks = []
+    for keyword in product.keywords:
+        task = crawl_product_rank.delay(
+            keyword=keyword.keyword,
+            product_url=product.url
+        )
+        tasks.append({"keyword": keyword.keyword, "task_id": task.id})
+    return {"tasks": tasks}
+
+@app.get("/products/{product_id}/rankings")
+def get_product_rankings(product_id: int, db: Session = Depends(get_db)):
+    rankings = db.query(models.Ranking)\
+        .join(models.Keyword)\
+        .filter(models.Keyword.product_id == product_id)\
+        .order_by(models.Ranking.checked_at.desc())\
+        .all()
+    return rankings
+
 # requirements.txt에 추가된 패키지
 # fastapi[all]
 # uvicorn[standard]

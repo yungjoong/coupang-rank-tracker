@@ -53,6 +53,16 @@ services:
     depends_on:
       - celery_worker
 
+  celery_beat:
+    build: ./backend
+    command: celery -A src.worker.celery beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/coupang_rank
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - db
+
   redis:
     image: redis:alpine
     ports:

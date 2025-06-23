@@ -1,7 +1,11 @@
 from celery import Celery
+from celery.schedules import crontab
 from .config import settings
 from .crawler.test_again import find_product_rank  # import 경로 수정
 import asyncio
+from sqlalchemy.orm import Session
+from .database import SessionLocal
+from . import models
 
 celery = Celery(
     "tasks",
@@ -16,6 +20,14 @@ celery.conf.update(
     timezone='Asia/Seoul',
     enable_utc=True,
 )
+
+# Celery Beat 스케줄 설정
+celery.conf.beat_schedule = {
+    'check-rankings-daily': {
+        'task': 'src.worker.check_all_products_ranks',
+        'schedule': crontab(hour=0, minute=0),  # 매일 자정에 실행
+    },
+}
 
 @celery.task
 def crawl_product_rank(keyword: str, product_url: str):
@@ -44,3 +56,18 @@ def crawl_product_rank(keyword: str, product_url: str):
             "keyword": keyword,
             "url": product_url
         }
+
+@celery.task
+def check_all_products_ranks():
+    """모든 상품의 순위를 체크하는 태스크"""
+    db = SessionLocal()
+    try:
+        products = db.query(models.Product).all()
+        for product in products:
+            for keyword in product.keywords:
+                crawl_product_rank.delay(
+                    keyword=keyword.keyword,
+                    product_url=product.url
+                )
+    finally:
+        db.close()

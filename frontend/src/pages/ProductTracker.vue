@@ -63,7 +63,7 @@
       </div>
 
       <!-- 상품 목록 -->
-      <div class="col-12 col-md-6">
+      <div class="col-12">
         <q-card>
           <q-card-section>
             <div class="text-h6">등록된 상품</div>
@@ -71,25 +71,47 @@
 
           <q-card-section>
             <q-list>
-              <q-item
+              <q-expansion-item
                 v-for="product in products"
                 :key="product.id"
-                class="q-mb-sm"
+                :label="product.name"
+                :caption="product.url"
               >
-                <q-item-section>
-                  <q-item-label>{{ product.name }}</q-item-label>
-                  <q-item-label caption>{{ product.url }}</q-item-label>
-                  <div class="q-gutter-xs">
-                    <q-chip
-                      v-for="keyword in product.keywords"
-                      :key="keyword.id"
-                      size="sm"
-                    >
-                      {{ keyword.keyword }}
-                    </q-chip>
-                  </div>
-                </q-item-section>
-              </q-item>
+                <q-card>
+                  <q-card-section>
+                    <div class="row items-center q-gutter-sm">
+                      <q-chip
+                        v-for="keyword in product.keywords"
+                        :key="keyword.id"
+                        size="sm"
+                      >
+                        {{ keyword.keyword }}
+                      </q-chip>
+                      <q-btn
+                        color="primary"
+                        icon="refresh"
+                        label="순위 체크"
+                        @click="checkRanks(product.id)"
+                        :loading="checking[product.id]"
+                      />
+                    </div>
+                  </q-card-section>
+
+                  <!-- 순위 결과 표시 -->
+                  <q-card-section v-if="rankings[product.id]">
+                    <q-table
+                      :rows="rankings[product.id]"
+                      :columns="[
+                        { name: 'keyword', label: '키워드', field: 'keyword' },
+                        { name: 'rank', label: '순위', field: 'rank' },
+                        { name: 'checked_at', label: '체크 시간', field: 'checked_at' }
+                      ]"
+                      row-key="keyword"
+                      dense
+                    />
+                  </q-card-section>
+                </q-card>
+              </q-expansion-item>
             </q-list>
           </q-card-section>
         </q-card>
@@ -162,6 +184,41 @@ const fetchProducts = async () => {
     products.value = data
   } catch (error) {
     console.error('Error:', error)
+  }
+}
+
+const checking = ref({})
+const rankings = ref({})
+
+const checkRanks = async (productId: string) => {
+  try {
+    checking.value[productId] = true
+    const { data } = await api.post(`/products/${productId}/check-ranks`)
+
+    // 태스크 결과 폴링
+    for (const task of data.tasks) {
+      let status = 'PENDING'
+      while (status === 'PENDING') {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        const { data: taskResult } = await api.get(`/tasks/${task.task_id}`)
+        status = taskResult.status
+        if (status === 'SUCCESS') {
+          // 순위 결과 저장
+          if (!rankings.value[productId]) {
+            rankings.value[productId] = []
+          }
+          rankings.value[productId].push({
+            keyword: task.keyword,
+            rank: taskResult.result.rank,
+            checked_at: new Date().toLocaleString()
+          })
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error)
+  } finally {
+    checking.value[productId] = false
   }
 }
 
