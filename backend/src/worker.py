@@ -3,7 +3,6 @@ from celery.schedules import crontab
 from .config import settings
 from .crawler.test_again import find_product_rank  # import 경로 수정
 import asyncio
-from sqlalchemy.orm import Session
 from .database import SessionLocal
 from . import models
 
