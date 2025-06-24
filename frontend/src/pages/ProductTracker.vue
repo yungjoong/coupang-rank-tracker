@@ -98,9 +98,9 @@
                   </q-card-section>
 
                   <!-- 순위 결과 표시 -->
-                  <q-card-section v-if="rankings[product.id]">
+                  <q-card-section v-if="(rankings[product.id] || []).length > 0">
                     <q-table
-                      :rows="rankings[product.id]"
+                      :rows="rankings[product.id] || []"
                       :columns="[
                         { name: 'keyword', label: '키워드', field: 'keyword' },
                         { name: 'rank', label: '순위', field: 'rank' },
