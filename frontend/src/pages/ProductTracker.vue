@@ -187,8 +187,8 @@ const fetchProducts = async () => {
   }
 }
 
-const checking = ref({})
-const rankings = ref({})
+const checking = ref<Record<string, boolean>>({})
+const rankings = ref<Record<string, Array<{keyword: string, rank: number, checked_at: string}>>>({})
 
 const checkRanks = async (productId: string) => {
   try {
