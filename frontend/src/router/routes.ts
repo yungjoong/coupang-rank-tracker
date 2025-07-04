@@ -8,6 +8,10 @@ const routes: RouteRecordRaw[] = [
       {
         path: '',
         component: () => import('pages/ProductTracker.vue')
+      },
+      {
+        path: '/rank-check',
+        component: () => import('pages/RankChecker.vue')
       }
     ],
   },

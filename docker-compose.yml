@@ -79,5 +79,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  crawler:
+    build:
+      context: .
+      dockerfile: crawler/Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - DISPLAY=:0
+
 volumes:
   postgres_data:
