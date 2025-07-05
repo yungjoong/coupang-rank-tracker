@@ -46,8 +46,8 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         options.add_argument('--window-size=360,800')  # Galaxy S22 해상도
         options.add_argument('--auto-open-devtools-for-tabs')
         options.add_argument('--user-agent=Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
-        options.headless = False  # uc 내부 버그 우회
-        driver = uc.Chrome(options=options, headless=False)
+        options.headless = True  # headless 모드로 변경
+        driver = uc.Chrome(options=options, headless=True)
         try:
             # 모바일 디바이스 에뮬레이션 적용 (Galaxy S22)
             device_metrics = {
@@ -86,7 +86,7 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         # except Exception as e:
         #     print("앱 설치 배너 없음 또는 닫기 실패:", e)
         # [앱 하단 배너 닫기] BottomAppBanner의 닫기 버튼 클릭 시도
-        input("브라우저 상태를 확인한 후 Enter를 누르세요...")
+        # input("브라우저 상태를 확인한 후 Enter를 누르세요...")
 
         # [앱 하단 배너 닫기] BottomAppBanner의 닫기 버튼 클릭 시도
         try:
@@ -121,7 +121,7 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         except Exception as e:
             print("앱 하단 배너 없음 또는 닫기 실패:", e)
 
-        input("브라우저 상태를 확인한 후 Enter를 누르세요...")
+        # input("브라우저 상태를 확인한 후 Enter를 누르세요...")
 
         all_products = []
         global_rank = 1
@@ -186,7 +186,10 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
                             screenshots.append(screenshot_path)
                 except Exception as e:
                     print(f"[오류] 상품 정보 추출 실패: {e}")
-            # 다음 페이지 이동 (페이지네이션 버튼 클릭)
+            # 상품을 찾았다면 더 이상 다음 페이지로 넘어가지 않음
+            if found_rank and found_page:
+                print(f"상품을 찾았으므로 {page}페이지에서 루프 종료")
+                break
             if page < max_pages:
                 try:
                     next_page_btn = WebDriverWait(driver, 10).until(
@@ -239,33 +242,41 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
 
 
 def close_bottom_banners(driver, max_wait=10):
+    import time
     start = time.time()
     while time.time() - start < max_wait:
         closed = False
-        # 하단 로그인 유도 배너 닫기
+        # 1. 하단 로그인 유도 배너 닫기 (항상 먼저 시도)
         try:
             bottom_sheet_close = driver.find_element(By.CSS_SELECTOR, "#bottomSheetBudgeCloseButton")
             if bottom_sheet_close.is_displayed():
                 bottom_sheet_close.click()
                 print("하단 로그인 유도 배너 닫기 완료")
                 closed = True
-                time.sleep(0.5)
+                # 배너가 사라질 때까지 대기
+                WebDriverWait(driver, 5).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, "#bottomSheetBudgeCloseButton"))
+                )
+                time.sleep(0.2)
         except Exception:
             pass
-        # 앱 하단 배너 닫기
+        # 2. 앱 하단 배너 닫기 (로그인 유도 배너가 사라진 후 시도)
         try:
             close_app_banner = driver.find_element(By.CSS_SELECTOR, "#BottomAppBanner a.close-banner")
             if close_app_banner.is_displayed():
                 close_app_banner.click()
                 print("앱 하단 배너 닫기 완료")
                 closed = True
-                time.sleep(0.5)
+                WebDriverWait(driver, 5).until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, "#BottomAppBanner"))
+                )
+                time.sleep(0.2)
         except Exception:
             pass
         # 둘 다 안 보이면 종료
         if not closed:
             break
-        time.sleep(0.5)
+        time.sleep(0.2)
 
 
 if __name__ == "__main__":

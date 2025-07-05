@@ -29,7 +29,10 @@ class RankResponse(BaseModel):
 @app.post("/rank", response_model=RankResponse)
 def get_rank(req: RankRequest):
     result = get_coupang_product_rank(req.search_keyword, req.product_url, req.max_pages)
-    if result["rank"] is not None:
-        return RankResponse(rank=result["rank"], page=result["page"], message=None, links=result["links"], screenshots=result["screenshots"])
-    else:
-        return RankResponse(rank=None, page=None, message="상품이 검색 결과에 없습니다.", links=result["links"], screenshots=result["screenshots"])
+    return RankResponse(
+        rank=result.get("rank"),
+        page=result.get("page"),
+        message=result.get("message", "상품이 검색 결과에 없습니다."),
+        links=result.get("links", []),
+        screenshots=result.get("screenshots", [])
+    )

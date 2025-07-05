@@ -59,6 +59,20 @@
               />
             </q-form>
           </q-card-section>
+          <q-card-section v-if="rankResult">
+            <div v-if="rankResult.rank !== null">
+              <q-banner class="bg-green-2 text-green-10">
+                {{ form.keywords[0] || '키워드' }} 검색 결과<br>
+                <b>{{ form.url }}</b><br>
+                <span>→ {{ rankResult.page }}페이지, {{ rankResult.rank }}번째에 노출됩니다.</span>
+              </q-banner>
+            </div>
+            <div v-else>
+              <q-banner class="bg-red-2 text-red-10">
+                {{ rankResult.message || '상품이 검색 결과에 없습니다.' }}
+              </q-banner>
+            </div>
+          </q-card-section>
         </q-card>
       </div>
 
@@ -122,7 +136,7 @@
 
 <script setup lang="ts">
 import type { Ref } from 'vue';
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { api } from 'boot/axios'
 
 const form = ref({
@@ -146,44 +160,22 @@ const removeKeyword = (index: number) => {
   form.value.keywords.splice(index, 1)
 }
 
+const rankResult = ref<{ rank: number|null, page: number|null, message?: string }|null>(null)
+
 const onSubmit = async () => {
   try {
     loading.value = true
-    // 상품 추가
-    const { data: product } = await api.post('/products', {
-      url: form.value.url,
-      name: form.value.name
+    const { data } = await api.post('/rank', {
+      search_keyword: form.value.keywords[0] || '모기장',
+      product_url: form.value.url,
+      max_pages: 3
     })
-
-    // 키워드 추가
-    for (const keyword of form.value.keywords) {
-      await api.post(`/products/${product.id}/keywords`, {
-        keyword
-      })
-    }
-
-    // 폼 초기화
-    form.value = {
-      url: '',
-      name: '',
-      keywords: []
-    }
-
-    // 목록 새로고침
-    await fetchProducts()
+    rankResult.value = data
   } catch (error) {
-    console.error('Error:', error)
+    console.error(error)
+    rankResult.value = { rank: null, page: null, message: '에러가 발생했습니다.' }
   } finally {
     loading.value = false
-  }
-}
-
-const fetchProducts = async () => {
-  try {
-    const { data } = await api.get('/products')
-    products.value = data
-  } catch (error) {
-    console.error('Error:', error)
   }
 }
 
@@ -193,7 +185,7 @@ const rankings = ref<Record<string, Array<{keyword: string, rank: number, checke
 const checkRanks = async (productId: string) => {
   try {
     checking.value[productId] = true
-    const { data } = await api.post(`/products/${productId}/check-ranks`)
+    const { data } = await api.post(`/rank/${productId}/check-ranks`)
 
     // 태스크 결과 폴링
     for (const task of data.tasks) {
@@ -221,8 +213,4 @@ const checkRanks = async (productId: string) => {
     checking.value[productId] = false
   }
 }
-
-onMounted(async () => {
-  await fetchProducts()
-})
 </script>
