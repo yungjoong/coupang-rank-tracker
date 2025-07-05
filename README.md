@@ -27,7 +27,10 @@ cp backend/.env.example backend/.env
 
 # Coupang Rank Tracker
 
-## 오늘(25.7.5)  작업한 내용
+## 25.7.5 작업한 내용
+- coupang_rank_crawler.py 초안 작성 완료
+
+## 25.7.4 작업한 내용
 
 - 쿠팡 상품 검색 결과에서 여러 페이지(1~N페이지) 상품 정보를 크롤링하는 기능 구현
 - 페이지네이션(다음 페이지 이동) 시 동적으로 변하는 class명을 견고하게 처리하는 방법 논의
