@@ -10,6 +10,7 @@ import undetected_chromedriver as uc
 import time
 import os
 import random
+from selenium.common.exceptions import NoAlertPresentException
 
 
 def extract_product_id(url: str) -> str | None:
@@ -42,31 +43,86 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--window-size=1280,800')
+        options.add_argument('--window-size=360,800')  # Galaxy S22 해상도
         options.add_argument('--auto-open-devtools-for-tabs')
-        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+        options.add_argument('--user-agent=Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
         options.headless = False  # uc 내부 버그 우회
         driver = uc.Chrome(options=options, headless=False)
-        driver.get("https://www.coupang.com/")
-        time.sleep(4)
-        print("현재 URL:", driver.current_url)
+        try:
+            # 모바일 디바이스 에뮬레이션 적용 (Galaxy S22)
+            device_metrics = {
+                "width": 360,
+                "height": 800,
+                "deviceScaleFactor": 3.0,
+                "mobile": True
+            }
+            driver.execute_cdp_cmd("Emulation.setDeviceMetricsOverride", device_metrics)
+            driver.execute_cdp_cmd("Emulation.setUserAgentOverride", {
+                "userAgent": "Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            })
+            driver.execute_cdp_cmd("Emulation.setTouchEmulationEnabled", {
+                "enabled": True,
+                "configuration": "mobile"
+            })
+        except Exception as e:
+            print("[모바일 에뮬레이션 오류]", e)
+        # 모바일 쿠팡 메인 페이지로 이동
+        # driver.get("https://m.coupang.com/")
+
+        # 검색어로 바로 검색 결과 페이지로 이동
+        time.sleep(3)
+        search_url = f"https://m.coupang.com/nm/search?q={search_keyword}"
+        driver.get(search_url)
+        close_bottom_banners(driver)
+
+        # [배너 닫기] close-banner-icon-button 클릭 시도
+        # try:
+        #     close_btn = WebDriverWait(driver, 5).until(
+        #         EC.element_to_be_clickable((By.CSS_SELECTOR, "button.close-banner-icon-button"))
+        #     )
+        #     close_btn.click()
+        #     print("앱 설치 배너 닫기 완료")
+        #     time.sleep(1)
+        # except Exception as e:
+        #     print("앱 설치 배너 없음 또는 닫기 실패:", e)
+        # [앱 하단 배너 닫기] BottomAppBanner의 닫기 버튼 클릭 시도
         input("브라우저 상태를 확인한 후 Enter를 누르세요...")
-        search_box = None
-        for selector in ["input[name='q']", "input#searchKeyword", "input[type='search']"]:
-            try:
-                search_box = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                )
-                if search_box:
-                    break
-            except Exception:
-                continue
-        if not search_box:
-            raise Exception("검색창을 찾을 수 없습니다.")
-        search_box.clear()
-        search_box.send_keys(search_keyword)
-        search_box.send_keys(Keys.ENTER)
-        time.sleep(2)
+
+        # [앱 하단 배너 닫기] BottomAppBanner의 닫기 버튼 클릭 시도
+        try:
+            close_app_banner = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#BottomAppBanner a.close-banner"))
+            )
+            close_app_banner.click()
+            print("앱 하단 배너 닫기 완료")
+            time.sleep(1)
+        except Exception as e:
+            print("앱 하단 배너 없음 또는 닫기 실패:", e)
+
+        # [하단 로그인 유도 배너 닫기]
+        try:
+            bottom_sheet_close = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#bottomSheetBudgeCloseButton"))
+            )
+            bottom_sheet_close.click()
+            print("하단 로그인 유도 배너 닫기 완료")
+            time.sleep(1)
+        except Exception as e:
+            print("하단 로그인 유도 배너 없음 또는 닫기 실패:", e)
+
+        # [앱 하단 배너 닫기] BottomAppBanner의 닫기 버튼 클릭 시도
+        try:
+            close_app_banner = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#BottomAppBanner a.close-banner"))
+            )
+            close_app_banner.click()
+            print("앱 하단 배너 닫기 완료")
+            time.sleep(1)
+        except Exception as e:
+            print("앱 하단 배너 없음 또는 닫기 실패:", e)
+
+        input("브라우저 상태를 확인한 후 Enter를 누르세요...")
+
         all_products = []
         global_rank = 1
         screenshots = []
@@ -82,28 +138,27 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
 
         for page in range(1, max_pages+1):
             print(page)
-            try:
-                products = driver.find_elements(By.CSS_SELECTOR, "ul#product-list > li")
-            except Exception as e:
-                print(f"[오류] driver 접근 실패(아마 브라우저가 닫힘): {e}")
-                break
+            # [디버깅] 각 페이지 HTML과 스크린샷 저장
+            with open(f"/tmp/coupang_search_page{page}.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            screenshot_path = f"/tmp/coupang_search_page{page}.png"
+            driver.save_screenshot(screenshot_path)
+            print(f"페이지 {page} HTML과 스크린샷 저장 완료: {screenshot_path}")
+
+            # 모바일 상품 리스트 추출
+            products = driver.find_elements(By.CSS_SELECTOR, "ul#productList > li.plp-default__item")
             for prod in products:
                 try:
                     a_tag = prod.find_element(By.TAG_NAME, "a")
                     link = a_tag.get_attribute("href")
+                    if link and link.startswith("/"):
+                        link = "https://m.coupang.com" + link
+                    img = prod.find_element(By.CSS_SELECTOR, "span.thumbnail img").get_attribute("src")
+                    name = prod.find_element(By.CSS_SELECTOR, "strong.title").text
                     try:
-                        name = prod.find_element(By.XPATH, ".//div[contains(@class, 'productName')]").text
+                        price = prod.find_element(By.CSS_SELECTOR, "div.discount-price strong").text
                     except:
-                        name = ""
-                    try:
-                        price = prod.find_element(By.XPATH, ".//strong[contains(@class, 'price')]").text
-                    except:
-                        price = ""
-                    try:
-                        img = prod.find_element(By.TAG_NAME, "img").get_attribute("src")
-                    except:
-                        img = ""
-                    # 상품 정보 출력
+                        price = prod.find_element(By.CSS_SELECTOR, "strong.price").text
                     print(f"상품명: {name} | 가격: {price} | 링크: {link} | 이미지: {img}")
                     all_products.append({
                         "name": name,
@@ -131,31 +186,26 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
                             screenshots.append(screenshot_path)
                 except Exception as e:
                     print(f"[오류] 상품 정보 추출 실패: {e}")
+            # 다음 페이지 이동 (페이지네이션 버튼 클릭)
             if page < max_pages:
-                print("next_page")
                 try:
-                    # 1. 오버레이가 사라질 때까지 대기
-                    WebDriverWait(driver, 10).until(
-                        EC.invisibility_of_element_located((By.CSS_SELECTOR, "div.fw-absolute"))
-                    )
-                    # 2. 버튼 찾기
                     next_page_btn = WebDriverWait(driver, 10).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, f'a[data-page="{page+1}"]'))
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, f'span.page[data-page="{page+1}"]'))
                     )
-                    # 3. 버튼을 화면 중앙에 위치
+                    # 하단 메뉴/배너 숨기기
+                    try:
+                        driver.execute_script("document.querySelectorAll('.footer-gotop, #bottomMenu').forEach(e => e.style.display='none');")
+                    except Exception:
+                        pass
+                    # 페이지네이션 버튼을 화면 중앙으로 스크롤
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_page_btn)
                     time.sleep(0.5)
-                    # 4. 클릭 시도 (예외 발생 시 재시도)
-                    for _ in range(3):
-                        try:
-                            next_page_btn.click()
-                            break
-                        except Exception as e:
-                            print(f"[재시도] 클릭 실패: {e}")
-                            time.sleep(1)
-                    # 5. 페이지 전환 대기
+                    next_page_btn.click()
+                    print(f"페이지 {page+1}로 이동 클릭 완료")
+                    close_bottom_banners(driver)
+                    # 상품 리스트가 갱신될 때까지 대기 (첫 번째 상품의 링크가 바뀔 때까지)
                     WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, f'a[data-page="{page+1}"].Pagination_selected__r1eiC'))
+                        EC.staleness_of(products[0])
                     )
                     time.sleep(2)
                 except Exception as e:
@@ -186,6 +236,36 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
                 driver.quit()
         except Exception:
             pass
+
+
+def close_bottom_banners(driver, max_wait=10):
+    start = time.time()
+    while time.time() - start < max_wait:
+        closed = False
+        # 하단 로그인 유도 배너 닫기
+        try:
+            bottom_sheet_close = driver.find_element(By.CSS_SELECTOR, "#bottomSheetBudgeCloseButton")
+            if bottom_sheet_close.is_displayed():
+                bottom_sheet_close.click()
+                print("하단 로그인 유도 배너 닫기 완료")
+                closed = True
+                time.sleep(0.5)
+        except Exception:
+            pass
+        # 앱 하단 배너 닫기
+        try:
+            close_app_banner = driver.find_element(By.CSS_SELECTOR, "#BottomAppBanner a.close-banner")
+            if close_app_banner.is_displayed():
+                close_app_banner.click()
+                print("앱 하단 배너 닫기 완료")
+                closed = True
+                time.sleep(0.5)
+        except Exception:
+            pass
+        # 둘 다 안 보이면 종료
+        if not closed:
+            break
+        time.sleep(0.5)
 
 
 if __name__ == "__main__":
