@@ -1,10 +1,15 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from .coupang_rank_crawler import get_coupang_product_rank
 from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 
+
 app = FastAPI()
+
+# /tmp 디렉토리의 파일을 /static 경로로 서빙
+app.mount("/static", StaticFiles(directory="/tmp"), name="static")
 
 app.add_middleware(
     CORSMiddleware,

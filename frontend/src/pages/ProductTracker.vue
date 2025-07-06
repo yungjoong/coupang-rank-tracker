@@ -66,6 +66,15 @@
                 <b>{{ form.url }}</b><br>
                 <span>→ {{ rankResult.page }}페이지, {{ rankResult.rank }}번째에 노출됩니다.</span>
               </q-banner>
+              <div v-if="rankResult.screenshots && rankResult.screenshots.length">
+                <div class="q-mt-md">화면 캡처:</div>
+                <div class="row q-col-gutter-md">
+                  <div v-for="(shot, idx) in rankResult.screenshots" :key="idx" class="col-auto">
+                    <q-img :src="getScreenshotUrl(shot)" style="max-width:200px;max-height:300px;" :alt="`캡처 ${idx+1}`" />
+                    <q-btn flat color="primary" icon="download" :href="getScreenshotUrl(shot)" :download="`capture_${idx+1}.png`" label="다운로드" class="q-mt-xs" />
+                  </div>
+                </div>
+              </div>
             </div>
             <div v-else>
               <q-banner class="bg-red-2 text-red-10">
@@ -160,11 +169,18 @@ const removeKeyword = (index: number) => {
   form.value.keywords.splice(index, 1)
 }
 
-const rankResult = ref<{ rank: number|null, page: number|null, message?: string }|null>(null)
+interface RankResult {
+  rank: number|null,
+  page: number|null,
+  message?: string,
+  screenshots?: string[]
+}
+const rankResult = ref<RankResult|null>(null)
 
 const onSubmit = async () => {
   try {
     loading.value = true
+    rankResult.value = null; // 기존 검색 결과 제거
     const { data } = await api.post('/rank', {
       search_keyword: form.value.keywords[0] || '모기장',
       product_url: form.value.url,
@@ -177,6 +193,20 @@ const onSubmit = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 캡처 이미지 파일 경로를 API URL로 변환 (백엔드에서 정적 파일로 제공해야 함)
+function getScreenshotUrl(path: string) {
+  if (!path) return ''
+  // /tmp/로 시작하면 /static/로 변환
+  if (path.startsWith('/tmp/')) {
+    return `${api.defaults.baseURL || ''}/static/${path.slice(5)}`
+  }
+  // /로 시작하면 /static/로 변환
+  if (path.startsWith('/')) {
+    return `${api.defaults.baseURL || ''}/static${path}`
+  }
+  return path
 }
 
 const checking = ref<Record<string, boolean>>({})

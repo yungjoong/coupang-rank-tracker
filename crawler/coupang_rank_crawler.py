@@ -44,6 +44,10 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--window-size=360,800')  # Galaxy S22 해상도
         options.add_argument('--user-agent=Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
+        # 추가 옵션
+        options.add_argument('--disable-software-rasterizer')
+        options.add_argument('--single-process')
+        options.add_argument('--headless=new')
         # headless 모드 해제 (headless=True는 쿠팡에서 막힐 수 있음)
         options.headless = True
         driver = uc.Chrome(options=options, headless=True)
