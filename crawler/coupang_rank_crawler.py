@@ -8,8 +8,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import undetected_chromedriver as uc
 import time
-import os
-import random
 from selenium.common.exceptions import NoAlertPresentException
 
 
@@ -39,15 +37,16 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
             logging.warning(f"[쿠팡] 잘못된 상품 URL: {product_url}")
             return {"rank": None, "page": None, "links": [], "screenshots": [], "products": []}
         options = uc.ChromeOptions()
+        # 안정성 향상을 위한 옵션 추가
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-gpu')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--window-size=360,800')  # Galaxy S22 해상도
-        options.add_argument('--auto-open-devtools-for-tabs')
         options.add_argument('--user-agent=Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
-        options.headless = False  # headless 모드 해제
-        driver = uc.Chrome(options=options, headless=False)
+        # headless 모드 해제 (headless=True는 쿠팡에서 막힐 수 있음)
+        options.headless = True
+        driver = uc.Chrome(options=options, headless=True)
         try:
             # 모바일 디바이스 에뮬레이션 적용 (Galaxy S22)
             device_metrics = {
@@ -66,13 +65,18 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
             })
         except Exception as e:
             print("[모바일 에뮬레이션 오류]", e)
+
+        # driver.delete_all_cookies()
+        # driver.set_window_size(360, 800)  # 모바일 해상도 설정
         # 모바일 쿠팡 메인 페이지로 이동
         # driver.get("https://m.coupang.com/")
 
         # 검색어로 바로 검색 결과 페이지로 이동
-        time.sleep(3)
         search_url = f"https://m.coupang.com/nm/search?q={search_keyword}"
+        driver.delete_all_cookies()
         driver.get(search_url)
+        # print("드라이버 타이틀:", driver.title)
+
         close_bottom_banners(driver)
 
         # [배너 닫기] close-banner-icon-button 클릭 시도
