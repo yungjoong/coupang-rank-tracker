@@ -46,8 +46,8 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         options.add_argument('--window-size=360,800')  # Galaxy S22 해상도
         options.add_argument('--auto-open-devtools-for-tabs')
         options.add_argument('--user-agent=Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
-        options.headless = True  # headless 모드로 변경
-        driver = uc.Chrome(options=options, headless=True)
+        options.headless = False  # headless 모드 해제
+        driver = uc.Chrome(options=options, headless=False)
         try:
             # 모바일 디바이스 에뮬레이션 적용 (Galaxy S22)
             device_metrics = {
@@ -138,6 +138,7 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
 
         for page in range(1, max_pages+1):
             print(page)
+            print("현재 URL:", driver.current_url)
             # [디버깅] 각 페이지 HTML과 스크린샷 저장
             with open(f"/tmp/coupang_search_page{page}.html", "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
