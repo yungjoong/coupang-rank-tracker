@@ -1,3 +1,52 @@
+# 현재 진행상황
+
+1. 배너 삭제, 클릭을 통한 페이지 이동 시도
+   => 배너가 완벽하게 사라지지 않음. => 대기시간을 10 -> 15초로 늘림. => 소용없음
+   => 클릭이 안되는 오류가 발생함.
+
+# Coupang Rank Tracker - 윈도우 환경 배포 가이드
+
+## 1. 사전 준비
+- Windows 10/11 PC 또는 서버
+- [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop) 설치 (WSL2 백엔드 권장)
+- [Git for Windows](https://git-scm.com/download/win) 설치
+
+## 2. 프로젝트 다운로드
+```sh
+git clone https://github.com/yungjoong/coupang-rank-tracker.git
+cd coupang-rank-tracker
+```
+
+## 3. 환경 파일(.env) 준비
+- `.env.example` 파일이 있다면 복사해서 `.env`로 만들고, 필요한 값을 채워주세요.
+
+## 4. 서비스 실행
+```sh
+docker-compose up -d --build
+```
+- 최초 실행 시 이미지 빌드 및 의존성 설치로 시간이 다소 걸릴 수 있습니다.
+
+## 5. 서비스 접속
+- 웹사이트: http://localhost:9000
+- (서버라면 방화벽/포트포워딩 필요)
+
+## 6. 기타 명령어
+- 서비스 중지: `docker-compose down`
+- 로그 확인: `docker-compose logs`
+- 컨테이너 상태 확인: `docker ps`
+
+## 7. 윈도우 환경에서 자주 발생하는 문제/FAQ
+- **WSL2가 설치되어 있지 않으면 Docker Desktop이 동작하지 않음**
+  → 설치 과정에서 WSL2 설치 안내가 나오면 반드시 따라야 함
+- **포트 충돌**
+  → 이미 9000, 8000, 5432, 6379 등 포트를 쓰는 서비스가 있으면 docker-compose.yml에서 포트 변경 필요
+- **공유 드라이브 권한 문제**
+  → Docker Desktop에서 "Settings > Resources > File Sharing"에서 프로젝트 폴더 드라이브(C: 등)를 공유해야 함
+- **방화벽/네트워크**
+  → 외부에서 접속하려면 방화벽/포트포워딩 설정 필요
+
+---
+
 # Coupang Rank Tracker
 
 ## 목차

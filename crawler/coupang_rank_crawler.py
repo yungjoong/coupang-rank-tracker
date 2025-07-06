@@ -45,9 +45,9 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         options.add_argument('--window-size=360,800')  # Galaxy S22 해상도
         options.add_argument('--user-agent=Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
         # 추가 옵션
-        options.add_argument('--disable-software-rasterizer')
-        options.add_argument('--single-process')
-        options.add_argument('--headless=new')
+        # options.add_argument('--disable-software-rasterizer')
+        # options.add_argument('--single-process')
+        # options.add_argument('--headless=new')
         # headless 모드 해제 (headless=True는 쿠팡에서 막힐 수 있음)
         options.headless = True
         driver = uc.Chrome(options=options, headless=True)
@@ -71,30 +71,29 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
             print("[모바일 에뮬레이션 오류]", e)
 
         # driver.delete_all_cookies()
-        # driver.set_window_size(360, 800)  # 모바일 해상도 설정
-        # 모바일 쿠팡 메인 페이지로 이동
-        # driver.get("https://m.coupang.com/")
+        # # driver.set_window_size(360, 800)  # 모바일 해상도 설정
+        # # 모바일 쿠팡 메인 페이지로 이동
+        # driver.get("https://www.coupang.com/")
+
+        # # 페이지 로딩 완료 대기
+        # WebDriverWait(driver, 10).until(
+        #     lambda driver: driver.execute_script("return document.readyState") == "complete"
+        # )
+
+        # wait_and_remove_banners(driver)
+
+        # input("확인")
 
         # 검색어로 바로 검색 결과 페이지로 이동
         search_url = f"https://m.coupang.com/nm/search?q={search_keyword}"
         driver.delete_all_cookies()
         driver.get(search_url)
         # print("드라이버 타이틀:", driver.title)
+        WebDriverWait(driver, 10).until(
+            lambda driver: driver.execute_script("return document.readyState") == "complete"
+        )
 
         close_bottom_banners(driver)
-
-        # [배너 닫기] close-banner-icon-button 클릭 시도
-        # try:
-        #     close_btn = WebDriverWait(driver, 5).until(
-        #         EC.element_to_be_clickable((By.CSS_SELECTOR, "button.close-banner-icon-button"))
-        #     )
-        #     close_btn.click()
-        #     print("앱 설치 배너 닫기 완료")
-        #     time.sleep(1)
-        # except Exception as e:
-        #     print("앱 설치 배너 없음 또는 닫기 실패:", e)
-        # [앱 하단 배너 닫기] BottomAppBanner의 닫기 버튼 클릭 시도
-        # input("브라우저 상태를 확인한 후 Enter를 누르세요...")
 
         # [앱 하단 배너 닫기] BottomAppBanner의 닫기 버튼 클릭 시도
         try:
@@ -201,6 +200,7 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
                 break
             if page < max_pages:
                 try:
+                    close_bottom_banners(driver)
                     next_page_btn = WebDriverWait(driver, 10).until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, f'span.page[data-page="{page+1}"]'))
                     )
@@ -250,14 +250,18 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
             pass
 
 
-def close_bottom_banners(driver, max_wait=10):
+def close_bottom_banners(driver, max_wait=15):
     import time
     start = time.time()
+
     while time.time() - start < max_wait:
         closed = False
-        # 1. 하단 로그인 유도 배너 닫기 (항상 먼저 시도)
+
+        # 2. 하단 로그인 유도 배너가 나타날 때까지 대기 후 닫기
         try:
-            bottom_sheet_close = driver.find_element(By.CSS_SELECTOR, "#bottomSheetBudgeCloseButton")
+            bottom_sheet_close = WebDriverWait(driver, 2).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#bottomSheetBudgeCloseButton"))
+            )
             if bottom_sheet_close.is_displayed():
                 bottom_sheet_close.click()
                 print("하단 로그인 유도 배너 닫기 완료")
@@ -269,9 +273,12 @@ def close_bottom_banners(driver, max_wait=10):
                 time.sleep(0.2)
         except Exception:
             pass
-        # 2. 앱 하단 배너 닫기 (로그인 유도 배너가 사라진 후 시도)
+
+        # 3. 앱 하단 배너가 나타날 때까지 대기 후 닫기
         try:
-            close_app_banner = driver.find_element(By.CSS_SELECTOR, "#BottomAppBanner a.close-banner")
+            close_app_banner = WebDriverWait(driver, 2).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "#BottomAppBanner a.close-banner"))
+            )
             if close_app_banner.is_displayed():
                 close_app_banner.click()
                 print("앱 하단 배너 닫기 완료")
@@ -282,16 +289,103 @@ def close_bottom_banners(driver, max_wait=10):
                 time.sleep(0.2)
         except Exception:
             pass
-        # 둘 다 안 보이면 종료
+
+        # 4. 이미지 배너 닫기 버튼이 나타날 때까지 대기 후 클릭
+        try:
+            # 이미지 배너 닫기 버튼들 (여러 선택자 시도)
+            close_selectors = [
+                ".bottom-sheet-nudge-container__close-button",
+                ".bottom-sheet-nudge-container button[aria-label*='닫기']",
+                ".bottom-sheet-nudge-container .close",
+                ".bottom-sheet-nudge-container__content button",
+                ".bottom-sheet-nudge-container__content .close-button"
+            ]
+
+            for selector in close_selectors:
+                try:
+                    close_button = WebDriverWait(driver, 1).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                    )
+                    if close_button.is_displayed():
+                        close_button.click()
+                        print(f"이미지 배너 닫기 완료 (선택자: {selector})")
+                        closed = True
+                        time.sleep(0.2)
+                        break
+                except Exception:
+                    continue
+
+        except Exception:
+            pass
+
+        # 5. 전체 화면 배너가 나타날 때까지 대기 후 제거
+        try:
+            full_banner = WebDriverWait(driver, 2).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#fullBanner"))
+            )
+            if full_banner.is_displayed():
+                driver.execute_script("document.querySelector('#fullBanner').remove();")
+                print("전체 화면 배너 제거 완료")
+                closed = True
+                time.sleep(0.2)
+        except Exception:
+            pass
+
+        # 6. 상단 쿠팡 배너가 나타날 때까지 대기 후 제거
+        try:
+            coupang_banner = WebDriverWait(driver, 2).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#coupang-banner"))
+            )
+            if coupang_banner.is_displayed():
+                driver.execute_script("document.querySelector('#coupang-banner').remove();")
+                print("상단 쿠팡 배너 제거 완료")
+                closed = True
+                time.sleep(0.2)
+        except Exception:
+            pass
+
+        # 모든 배너가 처리되었으면 종료
         if not closed:
             break
         time.sleep(0.2)
 
+def wait_and_remove_banners(driver, timeout=30):
+    """배너가 나타날 때까지 기다린 후 제거"""
+
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        try:
+            # 배너 컨테이너가 나타날 때까지 대기
+            WebDriverWait(driver, 2).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#wa-banners"))
+            )
+
+            # 컨테이너 제거
+            driver.execute_script("document.querySelector('#wa-banners').remove();")
+            print("배너 컨테이너 제거 완료")
+            return True
+
+        except Exception:
+            # 0.5초 대기 후 재시도
+            time.sleep(0.5)
+            continue
+
+    print("타임아웃: 배너 제거 실패")
+    return False
+
 
 if __name__ == "__main__":
-    # 테스트용 예시
-    search_keyword = "모기장"
-    product_url = "https://www.coupang.com/vp/products/22907705?itemId=245504923&vendorItemId=3603606470"
-    product_name = "알뜨리 야광 원터치 모기장, 화이트"
+    # 테스트용 예시 (1page)
+    # search_keyword = "모기장"
+    # product_url = "https://www.coupang.com/vp/products/22907705?itemId=245504923&vendorItemId=3603606470"
+    # product_name = "알뜨리 야광 원터치 모기장, 화이트"
+    # result = get_coupang_product_rank(search_keyword, product_url, max_pages=3)
+    # print("크롤러 결과:", result)
+
+    # 테스트용 예시 (2page)
+    search_keyword = "비빔냉면"
+    product_url = "https://www.coupang.com/vp/products/2439939?itemId=18171088581&vendorItemId=85320458323"
+    product_name = "둥지냉면 동치미 물냉면 161g, 8개"
     result = get_coupang_product_rank(search_keyword, product_url, max_pages=3)
     print("크롤러 결과:", result)

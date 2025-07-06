@@ -26,6 +26,7 @@ services:
     volumes:
       - ./backend/src:/app/src
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./shared_tmp:/tmp
     depends_on:
       - db
       - redis
@@ -87,6 +88,8 @@ services:
       - "8001:8000"
     environment:
       - DISPLAY=:0
+    volumes:
+      - ./shared_tmp:/tmp
 
 volumes:
   postgres_data:
