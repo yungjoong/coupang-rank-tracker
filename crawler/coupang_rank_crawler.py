@@ -305,17 +305,58 @@ def close_bottom_banners_new(driver):
     else:
         print("close_bottom_banners_new: 제거할 배너 요소 없음")
 
-if __name__ == "__main__":
-    # 테스트용 예시 (1page)
-    # search_keyword = "모기장"
-    # product_url = "https://www.coupang.com/vp/products/22907705?itemId=245504923&vendorItemId=3603606470"
-    # product_name = "알뜨리 야광 원터치 모기장, 화이트"
-    # result = get_coupang_product_rank(search_keyword, product_url, max_pages=3)
-    # print("크롤러 결과:", result)
+# if __name__ == "__main__":
+#     # 테스트용 예시 (1page)
+#     # search_keyword = "모기장"
+#     # product_url = "https://www.coupang.com/vp/products/22907705?itemId=245504923&vendorItemId=3603606470"
+#     # product_name = "알뜨리 야광 원터치 모기장, 화이트"
+#     # result = get_coupang_product_rank(search_keyword, product_url, max_pages=3)
+#     # print("크롤러 결과:", result)
 
-    # 테스트용 예시 (2page)
-    search_keyword = "냉면"
-    product_url = "https://www.coupang.com/vp/products/2439939?itemId=18171088581&vendorItemId=85320458323"
-    product_name = "둥지냉면 동치미 물냉면 161g, 8개"
-    result = get_coupang_product_rank(search_keyword, product_url, max_pages=3)
-    print("크롤러 결과:", result)
+#     # 테스트용 예시 (2page)
+#     search_keyword = "냉면"
+#     product_url = "https://www.coupang.com/vp/products/2439939?itemId=18171088581&vendorItemId=85320458323"
+#     product_name = "둥지냉면 동치미 물냉면 161g, 8개"
+#     result = get_coupang_product_rank(search_keyword, product_url, max_pages=3)
+#     print("크롤러 결과:", result)
+
+if __name__ == "__main__":
+    import tkinter as tk
+    from tkinter import messagebox
+
+    def run_crawler():
+        keyword = entry_keyword.get()
+        url = entry_url.get()
+        try:
+            max_pages = int(entry_pages.get())
+        except ValueError:
+            max_pages = 3
+        btn_run.config(state="disabled")
+        root.update()
+        try:
+            result = get_coupang_product_rank(keyword, url, max_pages=max_pages)
+            messagebox.showinfo("결과", f"랭크: {result.get('rank')}\n페이지: {result.get('page')}")
+        except Exception as e:
+            messagebox.showerror("오류", str(e))
+        btn_run.config(state="normal")
+
+    root = tk.Tk()
+    root.title("쿠팡 랭킹 크롤러")
+
+    tk.Label(root, text="검색어:").pack()
+    entry_keyword = tk.Entry(root)
+    entry_keyword.pack()
+
+    tk.Label(root, text="상품 URL:").pack()
+    entry_url = tk.Entry(root)
+    entry_url.pack()
+
+    tk.Label(root, text="최대 페이지:").pack()
+    entry_pages = tk.Entry(root)
+    entry_pages.insert(0, "3")
+    entry_pages.pack()
+
+    btn_run = tk.Button(root, text="실행", command=run_crawler)
+    btn_run.pack()
+
+    root.mainloop()
