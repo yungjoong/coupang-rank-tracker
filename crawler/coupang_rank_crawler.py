@@ -9,6 +9,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import undetected_chromedriver as uc
 import time
 from selenium.common.exceptions import NoAlertPresentException
+import tempfile
+import os
 
 
 def extract_product_id(url: str) -> str | None:
@@ -127,13 +129,15 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
         else:
             logging.warning(f"[쿠팡] 상품 URL에서 vendorItemId를 찾을 수 없습니다: {product_url}")
 
+        temp_dir = tempfile.gettempdir()  # OS별 임시폴더 경로
         for page in range(1, max_pages+1):
             print(page)
             print("현재 URL:", driver.current_url)
             # [디버깅] 각 페이지 HTML과 스크린샷 저장
-            with open(f"/tmp/coupang_search_page{page}.html", "w", encoding="utf-8") as f:
+            html_path = os.path.join(temp_dir, f"coupang_search_page{page}.html")
+            with open(html_path, "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
-            screenshot_path = f"/tmp/coupang_search_page{page}.png"
+            screenshot_path = os.path.join(temp_dir, f"coupang_search_page{page}.png")
             driver.save_screenshot(screenshot_path)
             print(f"페이지 {page} HTML과 스크린샷 저장 완료: {screenshot_path}")
             close_bottom_banners_new(driver)
@@ -174,7 +178,7 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
                             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", prod)
                             time.sleep(0.5)  # 스크롤 후 약간 대기
                             # 2. 스크린샷 저장
-                            screenshot_path = f"/tmp/coupang_product_page{page}_rank{global_rank}.png"
+                            screenshot_path = os.path.join(temp_dir, f"coupang_product_page{page}_rank{global_rank}.png")
                             driver.save_screenshot(screenshot_path)
                             screenshots.append(screenshot_path)
                 except Exception as e:
@@ -212,9 +216,10 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
                 except Exception as e:
                     # 오류 발생 시 스크린샷 저장
 
-                    with open(f"/tmp/coupang_error_page{page+1}.html", "w", encoding="utf-8") as f:
+                    error_html_path = os.path.join(temp_dir, f"coupang_error_page{page+1}.html")
+                    with open(error_html_path, "w", encoding="utf-8") as f:
                         f.write(driver.page_source)
-                    error_screenshot_path = f"/tmp/coupang_error_page{page+1}.png"
+                    error_screenshot_path = os.path.join(temp_dir, f"coupang_error_page{page+1}.png")
                     driver.save_screenshot(error_screenshot_path)
                     print(f"[오류] 다음 페이지 이동 실패: {e}")
                     print(f"[디버깅] 오류 시점 스크린샷 저장 : {error_screenshot_path}")
@@ -236,7 +241,8 @@ def get_coupang_product_rank(search_keyword, product_url, max_pages=3, DEBUG=Fal
     finally:
         try:
             if 'driver' in locals() and hasattr(driver, 'page_source') and getattr(driver, 'session_id', None):
-                with open("/tmp/coupang_debug.html", "w", encoding="utf-8") as f:
+                debug_html_path = os.path.join(temp_dir, "coupang_debug.html")
+                with open(debug_html_path, "w", encoding="utf-8") as f:
                     f.write(driver.page_source)
         except Exception as fe:
             logging.error(f"[쿠팡] HTML 저장 실패: {fe}")
